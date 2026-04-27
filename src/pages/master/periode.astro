@@ -1,0 +1,439 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Tahun Ajaran &amp; Periode">
+	<header class="mb-6">
+		<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Master Data</p>
+		<h2 class="text-3xl font-black">Tahun Ajaran &amp; Periode Tagihan</h2>
+	</header>
+
+	<!-- Banner error koneksi -->
+	<div id="conn-error" class="hidden mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+	<!-- ============================================================ -->
+	<!-- TAHUN AJARAN                                                  -->
+	<!-- ============================================================ -->
+	<h3 class="mb-3 text-base font-bold uppercase tracking-wide text-slate-500">Tahun Ajaran</h3>
+	<section class="grid gap-4 lg:grid-cols-[340px_1fr]">
+		<div class="rounded-xl border border-slate-200 p-4">
+			<h4 id="year-form-title" class="font-semibold">Tambah Tahun Ajaran</h4>
+
+			<!-- Error form tahun ajaran -->
+			<div id="year-error" class="hidden mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"></div>
+
+			<form id="year-form">
+				<input type="hidden" id="year-edit-id" />
+				<div class="mt-3 space-y-3">
+					<input
+						name="name"
+						id="y-name"
+						required
+						placeholder="Contoh: 2026/2027"
+						class="w-full rounded-lg border border-slate-300 px-3 py-2"
+					/>
+					<label class="flex items-center gap-2 text-sm">
+						<input type="checkbox" name="is_active" id="y-active" />
+						Jadikan tahun ajaran aktif
+					</label>
+				</div>
+				<div class="mt-3 flex gap-2">
+					<button type="submit" id="year-submit"
+						class="rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+						Simpan
+					</button>
+					<button type="button" id="year-cancel"
+						class="hidden rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">
+						Batal
+					</button>
+				</div>
+			</form>
+		</div>
+
+		<div class="rounded-xl border border-slate-200 p-4">
+			<h4 class="font-semibold">Daftar Tahun Ajaran</h4>
+			<div class="mt-3 overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+						<tr>
+							<th class="px-3 py-2">Nama</th>
+							<th class="px-3 py-2">Status</th>
+							<th class="px-3 py-2">Aksi</th>
+						</tr>
+					</thead>
+					<tbody id="years-body">
+						<tr><td class="px-3 py-3 text-slate-400 text-xs" colspan="3">Memuat...</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================================================ -->
+	<!-- PERIODE TAGIHAN                                               -->
+	<!-- ============================================================ -->
+	<h3 class="mb-3 mt-10 text-base font-bold uppercase tracking-wide text-slate-500">Periode Tagihan</h3>
+	<section class="grid gap-4 lg:grid-cols-[420px_1fr]">
+		<div class="rounded-xl border border-slate-200 p-4">
+			<h4 id="period-form-title" class="font-semibold">Tambah Periode</h4>
+
+			<!-- Error form periode -->
+			<div id="period-error" class="hidden mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"></div>
+
+			<form id="period-form">
+				<input type="hidden" id="period-edit-id" />
+				<div class="mt-3 space-y-3">
+					<select name="academic_year_id" id="p-year" required
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+						<option value="">-- Pilih Tahun Ajaran --</option>
+					</select>
+					<input name="name" id="p-name" required
+						placeholder="Nama periode (contoh: Juli 2026)"
+						class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+					<input name="code" id="p-code" required
+						placeholder="Kode (contoh: 2026-07)"
+						class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<label class="block text-xs text-slate-500 mb-1">Tanggal Mulai</label>
+							<input name="start_date" id="p-start" required type="date"
+								class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+						</div>
+						<div>
+							<label class="block text-xs text-slate-500 mb-1">Tanggal Akhir</label>
+							<input name="end_date" id="p-end" required type="date"
+								class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+						</div>
+					</div>
+				</div>
+				<div class="mt-3 flex gap-2">
+					<button type="submit" id="period-submit"
+						class="rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+						Simpan
+					</button>
+					<button type="button" id="period-cancel"
+						class="hidden rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">
+						Batal
+					</button>
+				</div>
+			</form>
+		</div>
+
+		<div class="rounded-xl border border-slate-200 p-4">
+			<h4 class="font-semibold">Daftar Periode</h4>
+			<div class="mt-3 overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+						<tr>
+							<th class="px-3 py-2">Tahun Ajaran</th>
+							<th class="px-3 py-2">Nama</th>
+							<th class="px-3 py-2">Kode</th>
+							<th class="px-3 py-2">Mulai</th>
+							<th class="px-3 py-2">Akhir</th>
+							<th class="px-3 py-2">Aksi</th>
+						</tr>
+					</thead>
+					<tbody id="periods-body">
+						<tr><td class="px-3 py-3 text-slate-400 text-xs" colspan="6">Memuat...</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<script>
+		import { createClient } from "@supabase/supabase-js";
+
+		// ── Helpers ──────────────────────────────────────────────────────────────
+		const $ = (id) => document.getElementById(id);
+
+		function showError(elId, msg) {
+			const el = $(elId);
+			el.textContent = msg;
+			el.classList.remove("hidden");
+		}
+		function clearError(elId) {
+			const el = $(elId);
+			el.textContent = "";
+			el.classList.add("hidden");
+		}
+
+		const fmtDate = (d) =>
+			d ? new Date(d + "T00:00:00").toLocaleDateString("id-ID",
+				{ day: "2-digit", month: "short", year: "numeric" }) : "-";
+
+		// ── Init Supabase ─────────────────────────────────────────────────────────
+		const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+		const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+		if (!SUPA_URL || SUPA_URL.includes("YOUR_PROJECT") || !SUPA_KEY || SUPA_KEY.includes("YOUR_ANON")) {
+			showError("conn-error", "Konfigurasi Supabase belum diisi. Isi PUBLIC_SUPABASE_URL dan PUBLIC_SUPABASE_ANON_KEY di file .env lalu restart server.");
+		}
+
+		const supabase = createClient(SUPA_URL, SUPA_KEY);
+
+		// ============================================================
+		// TAHUN AJARAN
+		// ============================================================
+		const yearForm     = $("year-form");
+		const yearFormTitle = $("year-form-title");
+		const yearEditId   = $("year-edit-id");
+		const yearCancel   = $("year-cancel");
+		const yearsBody    = $("years-body");
+		const yearSubmit   = $("year-submit");
+		const yearMap      = new Map();
+
+		function resetYearForm() {
+			yearForm.reset();
+			yearEditId.value = "";
+			yearFormTitle.textContent = "Tambah Tahun Ajaran";
+			yearCancel.classList.add("hidden");
+			clearError("year-error");
+		}
+
+		async function loadYears() {
+			const { data, error } = await supabase
+				.from("academic_years")
+				.select("id,name,is_active")
+				.order("name");
+
+			if (error) {
+				yearsBody.innerHTML = `<tr><td class="px-3 py-3 text-red-600 text-xs" colspan="3">Error: ${error.message}</td></tr>`;
+				showError("conn-error", "Gagal memuat tahun ajaran: " + error.message);
+				return;
+			}
+
+			yearMap.clear();
+			(data || []).forEach((y) => yearMap.set(y.id, y));
+
+			// Sync dropdown periode
+			$("p-year").innerHTML =
+				'<option value="">-- Pilih Tahun Ajaran --</option>' +
+				(data || []).map((y) =>
+					`<option value="${y.id}">${y.name}${y.is_active ? " (aktif)" : ""}</option>`
+				).join("");
+
+			if (!data?.length) {
+				yearsBody.innerHTML = `<tr><td class="px-3 py-4 text-center text-slate-400 text-xs" colspan="3">Belum ada data. Tambahkan tahun ajaran pertama.</td></tr>`;
+				return;
+			}
+
+			yearsBody.innerHTML = data.map((y) => `<tr class="border-b">
+				<td class="px-3 py-2 font-medium">${y.name}</td>
+				<td class="px-3 py-2">
+					<span class="rounded-full px-2 py-0.5 text-xs font-medium ${y.is_active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}">
+						${y.is_active ? "Aktif" : "Tidak aktif"}
+					</span>
+				</td>
+				<td class="px-3 py-2 space-x-2 whitespace-nowrap">
+					<button data-id="${y.id}" data-action="year-edit"
+						class="text-blue-600 hover:underline text-xs">Edit</button>
+					<button data-id="${y.id}" data-action="year-activate"
+						class="text-xs ${y.is_active ? "text-slate-300 cursor-default" : "text-amber-600 hover:underline"}">
+						${y.is_active ? "Aktif" : "Set Aktif"}
+					</button>
+					<button data-id="${y.id}" data-action="year-delete"
+						class="text-red-600 hover:underline text-xs">Hapus</button>
+				</td>
+			</tr>`).join("");
+		}
+
+		yearsBody.addEventListener("click", async (e) => {
+			const btn = e.target.closest("button[data-action]");
+			if (!btn) return;
+			const { id, action } = btn.dataset;
+			const item = yearMap.get(id);
+			if (!item) return;
+
+			if (action === "year-edit") {
+				yearFormTitle.textContent = "Edit Tahun Ajaran";
+				yearEditId.value = item.id;
+				$("y-name").value = item.name;
+				$("y-active").checked = item.is_active;
+				yearCancel.classList.remove("hidden");
+				clearError("year-error");
+				window.scrollTo({ top: 0, behavior: "smooth" });
+			}
+
+			if (action === "year-activate") {
+				if (item.is_active) return;
+				btn.textContent = "...";
+				btn.disabled = true;
+				const { error: e1 } = await supabase.from("academic_years")
+					.update({ is_active: false }).not("id", "is", null);
+				if (e1) { showError("conn-error", "Gagal: " + e1.message); return; }
+				const { error: e2 } = await supabase.from("academic_years")
+					.update({ is_active: true }).eq("id", id);
+				if (e2) { showError("conn-error", "Gagal: " + e2.message); return; }
+				clearError("conn-error");
+				await loadYears();
+			}
+
+			if (action === "year-delete") {
+				if (!confirm(`Hapus tahun ajaran "${item.name}"?\nSemua kelas dan periode terkait akan ikut terhapus.`)) return;
+				const { error } = await supabase.from("academic_years").delete().eq("id", id);
+				if (error) { showError("conn-error", "Gagal hapus: " + error.message); return; }
+				clearError("conn-error");
+				await loadYears();
+				await loadPeriods();
+			}
+		});
+
+		yearCancel.addEventListener("click", resetYearForm);
+
+		yearForm.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			clearError("year-error");
+			yearSubmit.disabled = true;
+			yearSubmit.textContent = "Menyimpan...";
+
+			const fd = new FormData(yearForm);
+			const isEdit = !!yearEditId.value;
+			const payload = {
+				name: fd.get("name"),
+				is_active: fd.get("is_active") === "on",
+			};
+
+			let error;
+			if (isEdit) {
+				({ error } = await supabase.from("academic_years").update(payload).eq("id", yearEditId.value));
+			} else {
+				({ error } = await supabase.from("academic_years").insert(payload));
+			}
+
+			yearSubmit.disabled = false;
+			yearSubmit.textContent = "Simpan";
+
+			if (error) {
+				showError("year-error", error.message);
+				return;
+			}
+
+			resetYearForm();
+			await loadYears();
+		});
+
+		// ============================================================
+		// PERIODE TAGIHAN
+		// ============================================================
+		const periodForm      = $("period-form");
+		const periodFormTitle = $("period-form-title");
+		const periodEditId    = $("period-edit-id");
+		const periodCancel    = $("period-cancel");
+		const periodsBody     = $("periods-body");
+		const periodSubmit    = $("period-submit");
+		const periodMap       = new Map();
+
+		function resetPeriodForm() {
+			periodForm.reset();
+			periodEditId.value = "";
+			periodFormTitle.textContent = "Tambah Periode";
+			periodCancel.classList.add("hidden");
+			clearError("period-error");
+		}
+
+		async function loadPeriods() {
+			const { data, error } = await supabase
+				.from("billing_periods")
+				.select("id,name,code,start_date,end_date,academic_year_id,academic_years(name)")
+				.order("start_date", { ascending: false });
+
+			if (error) {
+				periodsBody.innerHTML = `<tr><td class="px-3 py-3 text-red-600 text-xs" colspan="6">Error: ${error.message}</td></tr>`;
+				return;
+			}
+
+			periodMap.clear();
+			(data || []).forEach((p) => periodMap.set(p.id, p));
+
+			if (!data?.length) {
+				periodsBody.innerHTML = `<tr><td class="px-3 py-4 text-center text-slate-400 text-xs" colspan="6">Belum ada periode. Buat tahun ajaran dulu, lalu tambah periode.</td></tr>`;
+				return;
+			}
+
+			periodsBody.innerHTML = data.map((item) => `<tr class="border-b">
+				<td class="px-3 py-2">${item.academic_years?.name ?? "-"}</td>
+				<td class="px-3 py-2">${item.name}</td>
+				<td class="px-3 py-2 font-mono text-xs">${item.code}</td>
+				<td class="px-3 py-2">${fmtDate(item.start_date)}</td>
+				<td class="px-3 py-2">${fmtDate(item.end_date)}</td>
+				<td class="px-3 py-2 space-x-2 whitespace-nowrap">
+					<button data-id="${item.id}" data-action="period-edit"
+						class="text-blue-600 hover:underline text-xs">Edit</button>
+					<button data-id="${item.id}" data-action="period-delete"
+						class="text-red-600 hover:underline text-xs">Hapus</button>
+				</td>
+			</tr>`).join("");
+		}
+
+		periodsBody.addEventListener("click", async (e) => {
+			const btn = e.target.closest("button[data-action]");
+			if (!btn) return;
+			const { id, action } = btn.dataset;
+			const item = periodMap.get(id);
+			if (!item) return;
+
+			if (action === "period-edit") {
+				periodFormTitle.textContent = "Edit Periode";
+				periodEditId.value = item.id;
+				$("p-year").value    = item.academic_year_id ?? "";
+				$("p-name").value   = item.name;
+				$("p-code").value   = item.code;
+				$("p-start").value  = item.start_date;
+				$("p-end").value    = item.end_date;
+				periodCancel.classList.remove("hidden");
+				clearError("period-error");
+				$("period-form").scrollIntoView({ behavior: "smooth" });
+			}
+
+			if (action === "period-delete") {
+				if (!confirm(`Hapus periode "${item.name}"?`)) return;
+				const { error } = await supabase.from("billing_periods").delete().eq("id", id);
+				if (error) { showError("period-error", error.message); return; }
+				clearError("period-error");
+				await loadPeriods();
+			}
+		});
+
+		periodCancel.addEventListener("click", resetPeriodForm);
+
+		periodForm.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			clearError("period-error");
+			periodSubmit.disabled = true;
+			periodSubmit.textContent = "Menyimpan...";
+
+			const fd = new FormData(periodForm);
+			const isEdit = !!periodEditId.value;
+			const payload = {
+				academic_year_id: fd.get("academic_year_id"),
+				name: fd.get("name"),
+				code: fd.get("code"),
+				start_date: fd.get("start_date"),
+				end_date: fd.get("end_date"),
+			};
+
+			let error;
+			if (isEdit) {
+				({ error } = await supabase.from("billing_periods").update(payload).eq("id", periodEditId.value));
+			} else {
+				({ error } = await supabase.from("billing_periods").insert(payload));
+			}
+
+			periodSubmit.disabled = false;
+			periodSubmit.textContent = "Simpan";
+
+			if (error) {
+				showError("period-error", error.message);
+				return;
+			}
+
+			resetPeriodForm();
+			await loadPeriods();
+		});
+
+		// ── Init ─────────────────────────────────────────────────────────────────
+		await loadYears();
+		await loadPeriods();
+	</script>
+</AppLayout>

@@ -1,0 +1,258 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Tagihan Siswa">
+	<header class="mb-6">
+		<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Transaksi</p>
+		<h2 class="text-3xl font-black">Tagihan Siswa</h2>
+	</header>
+
+	<section class="grid gap-4 lg:grid-cols-[460px_1fr]">
+		<form id="invoice-form" class="rounded-xl border border-slate-200 p-4">
+			<h3 id="form-title" class="text-lg font-bold">Buat Tagihan</h3>
+			<input type="hidden" id="edit-id" />
+			<div class="mt-4 space-y-3">
+				<select name="student_id" id="f-student" required
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+					<option value="">Pilih siswa</option>
+				</select>
+				<select name="component_id" id="f-component" required
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+					<option value="">Pilih komponen</option>
+				</select>
+				<select name="period_id" id="f-period" required
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+					<option value="">Pilih periode</option>
+				</select>
+				<input name="total_amount" id="f-amount" type="number" min="0" step="1000" required
+					placeholder="Nominal tagihan"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+				<select name="status" id="f-status" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+					<option value="posted">Ditagih (Posted)</option>
+					<option value="draft">Draft</option>
+				</select>
+			</div>
+			<div class="mt-4 flex gap-2">
+				<button type="submit"
+					class="rounded-lg bg-[var(--brand)] px-4 py-2 font-semibold text-white">
+					Simpan Tagihan
+				</button>
+				<button type="button" id="btn-cancel"
+					class="hidden rounded-lg border border-slate-300 px-4 py-2 font-semibold">
+					Batal
+				</button>
+			</div>
+		</form>
+
+		<div class="rounded-xl border border-slate-200 p-4">
+			<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+				<h3 class="text-lg font-bold">Daftar Tagihan</h3>
+				<select id="filter-status"
+					class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-white">
+					<option value="">Semua status</option>
+					<option value="draft">Draft</option>
+					<option value="posted">Ditagih</option>
+					<option value="paid">Lunas</option>
+					<option value="cancelled">Dibatalkan</option>
+				</select>
+			</div>
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+						<tr>
+							<th class="px-3 py-2">Siswa</th>
+							<th class="px-3 py-2">Komponen</th>
+							<th class="px-3 py-2">Periode</th>
+							<th class="px-3 py-2">Total</th>
+							<th class="px-3 py-2">Terbayar</th>
+							<th class="px-3 py-2">Status</th>
+							<th class="px-3 py-2">Aksi</th>
+						</tr>
+					</thead>
+					<tbody id="invoices-body"></tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<script>
+		import { createClient } from "@supabase/supabase-js";
+
+		const supabase = createClient(
+			import.meta.env.PUBLIC_SUPABASE_URL,
+			import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+		);
+		const idr = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+
+		const form = document.getElementById("invoice-form");
+		const formTitle = document.getElementById("form-title");
+		const editIdInput = document.getElementById("edit-id");
+		const btnCancel = document.getElementById("btn-cancel");
+		const body = document.getElementById("invoices-body");
+		const filterStatus = document.getElementById("filter-status");
+
+		const STATUS_BADGE = {
+			draft: "bg-slate-100 text-slate-600",
+			posted: "bg-blue-100 text-blue-700",
+			paid: "bg-green-100 text-green-700",
+			cancelled: "bg-red-100 text-red-600",
+		};
+		const STATUS_LABEL = { draft: "Draft", posted: "Ditagih", paid: "Lunas", cancelled: "Dibatalkan" };
+
+		const invoiceMap = new Map();
+		let componentData = [];
+
+		function resetForm() {
+			form.reset();
+			editIdInput.value = "";
+			formTitle.textContent = "Buat Tagihan";
+			btnCancel.classList.add("hidden");
+		}
+
+		async function loadSelectors() {
+			const [students, components, periods] = await Promise.all([
+				supabase.from("students").select("id,name").order("name"),
+				supabase.from("components").select("id,name,default_amount").eq("is_active", true).order("name"),
+				supabase
+					.from("billing_periods")
+					.select("id,name,start_date")
+					.order("start_date", { ascending: false }),
+			]);
+
+			if (students.error) return alert(students.error.message);
+			if (components.error) return alert(components.error.message);
+			if (periods.error) return alert(periods.error.message);
+
+			componentData = components.data || [];
+
+			const fStudent = document.getElementById("f-student");
+			const fComponent = document.getElementById("f-component");
+			const fPeriod = document.getElementById("f-period");
+
+			fStudent.innerHTML =
+				'<option value="">Pilih siswa</option>' +
+				(students.data || []).map((x) => `<option value="${x.id}">${x.name}</option>`).join("");
+			fComponent.innerHTML =
+				'<option value="">Pilih komponen</option>' +
+				componentData.map((x) => `<option value="${x.id}">${x.name}</option>`).join("");
+			fPeriod.innerHTML =
+				'<option value="">Pilih periode</option>' +
+				(periods.data || []).map((x) => `<option value="${x.id}">${x.name}</option>`).join("");
+
+			// Auto-isi nominal dari default komponen
+			fComponent.addEventListener("change", () => {
+				const found = componentData.find((x) => x.id === fComponent.value);
+				if (found) document.getElementById("f-amount").value = String(found.default_amount || 0);
+			});
+		}
+
+		async function loadInvoices() {
+			let query = supabase
+				.from("invoices")
+				.select(
+					"id,status,total_amount,paid_amount,student_id,component_id,period_id,students(name),components(name),billing_periods(name)",
+				)
+				.order("created_at", { ascending: false });
+
+			const statusFilter = filterStatus.value;
+			if (statusFilter) query = query.eq("status", statusFilter);
+
+			const { data, error } = await query;
+
+			if (error) {
+				body.innerHTML = `<tr><td class="px-3 py-3 text-red-600" colspan="7">${error.message}</td></tr>`;
+				return;
+			}
+
+			invoiceMap.clear();
+			(data || []).forEach((inv) => invoiceMap.set(inv.id, inv));
+
+			body.innerHTML = (data || [])
+				.map((item) => {
+					const badge = STATUS_BADGE[item.status] ?? "bg-slate-100 text-slate-600";
+					const label = STATUS_LABEL[item.status] ?? item.status;
+					const canEdit = item.status === "draft";
+					const canCancel = item.status === "draft" || item.status === "posted";
+					return `<tr class="border-b ${item.status === "cancelled" ? "opacity-50" : ""}">
+						<td class="px-3 py-2">${item.students?.name ?? "-"}</td>
+						<td class="px-3 py-2">${item.components?.name ?? "-"}</td>
+						<td class="px-3 py-2">${item.billing_periods?.name ?? "-"}</td>
+						<td class="px-3 py-2">${idr.format(Number(item.total_amount || 0))}</td>
+						<td class="px-3 py-2">${idr.format(Number(item.paid_amount || 0))}</td>
+						<td class="px-3 py-2">
+							<span class="rounded-full px-2 py-0.5 text-xs font-medium ${badge}">${label}</span>
+						</td>
+						<td class="px-3 py-2 space-x-2 whitespace-nowrap">
+							${canEdit ? `<button data-id="${item.id}" data-action="edit" class="text-blue-600 hover:underline text-xs">Edit</button>` : ""}
+							${canCancel ? `<button data-id="${item.id}" data-action="cancel" class="text-red-600 hover:underline text-xs">Batalkan</button>` : ""}
+						</td>
+					</tr>`;
+				})
+				.join("");
+		}
+
+		body.addEventListener("click", async (e) => {
+			const btn = e.target.closest("button[data-action]");
+			if (!btn) return;
+			const { id, action } = btn.dataset;
+			const item = invoiceMap.get(id);
+			if (!item) return;
+
+			if (action === "edit") {
+				formTitle.textContent = "Edit Tagihan";
+				editIdInput.value = item.id;
+				document.getElementById("f-student").value = item.student_id ?? "";
+				document.getElementById("f-component").value = item.component_id ?? "";
+				document.getElementById("f-period").value = item.period_id ?? "";
+				document.getElementById("f-amount").value = String(item.total_amount || 0);
+				document.getElementById("f-status").value = item.status;
+				btnCancel.classList.remove("hidden");
+				window.scrollTo({ top: 0, behavior: "smooth" });
+			}
+
+			if (action === "cancel") {
+				if (!confirm("Batalkan tagihan ini?")) return;
+				const { error } = await supabase
+					.from("invoices")
+					.update({ status: "cancelled" })
+					.eq("id", id);
+				if (error) return alert(error.message);
+				await loadInvoices();
+			}
+		});
+
+		filterStatus.addEventListener("change", loadInvoices);
+		btnCancel.addEventListener("click", resetForm);
+
+		form.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const fd = new FormData(form);
+			const isEdit = !!editIdInput.value;
+			const payload = {
+				student_id: fd.get("student_id"),
+				component_id: fd.get("component_id"),
+				period_id: fd.get("period_id"),
+				total_amount: Number(fd.get("total_amount")),
+				status: fd.get("status"),
+			};
+
+			if (isEdit) {
+				const { error } = await supabase
+					.from("invoices")
+					.update(payload)
+					.eq("id", editIdInput.value);
+				if (error) return alert(error.message);
+			} else {
+				const { error } = await supabase.from("invoices").insert(payload);
+				if (error) return alert(error.message);
+			}
+
+			resetForm();
+			await loadInvoices();
+		});
+
+		await loadSelectors();
+		await loadInvoices();
+	</script>
+</AppLayout>

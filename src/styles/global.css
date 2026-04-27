@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+	--bg: #f4f7fb;
+	--surface: #ffffff;
+	--ink: #152238;
+	--muted: #6b7280;
+	--brand: #0f766e;
+	--brand-soft: #ccfbf1;
+}
+
+body {
+	background: radial-gradient(circle at top right, #dbeafe, transparent 40%), var(--bg);
+	color: var(--ink);
+}

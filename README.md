@@ -1,46 +1,74 @@
-# Astro Starter Kit: Basics
+# SPP App (Astro + Tailwind + Supabase)
 
-```sh
-npm create astro@latest -- --template basics
-```
+Implementasi aplikasi SPP siswa berbasis flow:
+- Master data (`siswa`, `komponen biaya`, `periode tagihan`)
+- Transaksi (`tagihan siswa`, `pembayaran invoice`)
+- Dashboard ringkas (jumlah siswa, total tagihan, outstanding)
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Tech Stack
 
-## 🚀 Project Structure
+- Astro
+- Tailwind CSS (v4 via Vite plugin)
+- Supabase (Postgres + API)
 
-Inside of your Astro project, you'll see the following folders and files:
+## Struktur Penting
 
 ```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+src/
+  layouts/AppLayout.astro
+  pages/
+    index.astro
+    master/
+      siswa.astro
+      komponen.astro
+      periode.astro
+    tagihan/index.astro
+    pembayaran/index.astro
+supabase/
+  schema.sql
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+## 1) Setup Database Supabase
 
-## 🧞 Commands
+1. Buka SQL Editor di Supabase.
+2. Jalankan file [`supabase/schema.sql`](./supabase/schema.sql).
+3. Pastikan semua tabel berhasil dibuat.
 
-All commands are run from the root of the project, from a terminal:
+Catatan:
+- `schema.sql` ini pakai policy `dev_all_anon_*` untuk mempermudah development.
+- Untuk production, ganti policy agar lebih aman per role/user.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+## 2) Setup Environment
 
-## 👀 Want to learn more?
+Copy `.env.example` jadi `.env`.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Isi:
+
+```env
+PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+```
+
+## 3) Jalankan Aplikasi
+
+```bash
+npm install
+npm run dev
+```
+
+App jalan di `http://localhost:4321`.
+
+## 4) Alur Pakai Cepat
+
+1. Buka `Master > Periode Tagihan`, tambah tahun ajaran + periode.
+2. Buka `Master > Komponen Biaya`, tambah komponen dan nominal default.
+3. Buka `Master > Siswa`, tambah siswa + kelas + orang tua.
+4. Buka `Tagihan Siswa`, buat invoice per siswa.
+5. Buka `Pembayaran`, pilih siswa, centang invoice, proses payment.
+6. Cek `Dashboard` untuk ringkasan.
+
+## Validasi Fungsional yang Sudah Dibuat
+
+- Invoice unik per kombinasi `student + component + period`.
+- Status pembayaran flow: `draft -> partial -> paid` (dan tabel `payments` juga support `done`).
+- Pembayaran akan update `paid_amount` dan `status` di tabel `invoices`.

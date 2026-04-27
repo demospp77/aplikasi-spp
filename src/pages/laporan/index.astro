@@ -1,0 +1,781 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Laporan">
+	<header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Laporan</p>
+			<h2 class="text-3xl font-black">Laporan SPP</h2>
+		</div>
+		<button id="btn-print"
+			onclick="window.print()"
+			class="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-slate-50 transition print:hidden">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+				<path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H6v2h8v-2h-1a1 1 0 01-1-1V9H8v3a1 1 0 01-1 1z" clip-rule="evenodd"/>
+			</svg>
+			Cetak / Export PDF
+		</button>
+	</header>
+
+	<!-- Tab navigation -->
+	<div class="flex gap-1 border-b border-slate-200 mb-5 print:hidden">
+		<button data-tab="ringkasan"
+			class="tab-btn px-4 py-2 text-sm font-semibold border-b-2 border-[var(--brand)] text-[var(--brand)]">
+			Ringkasan
+		</button>
+		<button data-tab="tunggakan"
+			class="tab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+			Tunggakan
+		</button>
+		<button data-tab="pembayaran"
+			class="tab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+			Rekap Pembayaran
+		</button>
+		<button data-tab="invoice"
+			class="tab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+			Cetak Invoice
+		</button>
+	</div>
+
+	<!-- ═══════════════════ TAB: RINGKASAN ═══════════════════ -->
+	<div id="tab-ringkasan">
+		<!-- KPI Cards -->
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-5">
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Tagihan</p>
+				<p id="r-total" class="mt-2 text-2xl font-black text-[var(--ink)]">—</p>
+				<p id="r-total-count" class="text-xs text-slate-400 mt-0.5"></p>
+			</article>
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Sudah Terbayar</p>
+				<p id="r-paid" class="mt-2 text-2xl font-black text-green-600">—</p>
+				<p id="r-paid-count" class="text-xs text-slate-400 mt-0.5"></p>
+			</article>
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Outstanding</p>
+				<p id="r-outstanding" class="mt-2 text-2xl font-black text-red-500">—</p>
+				<p id="r-outstanding-count" class="text-xs text-slate-400 mt-0.5"></p>
+			</article>
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Tingkat Pelunasan</p>
+				<p id="r-rate" class="mt-2 text-2xl font-black text-[var(--brand)]">—</p>
+				<p class="text-xs text-slate-400 mt-0.5">dari total tagihan aktif</p>
+			</article>
+		</div>
+
+		<!-- Filter -->
+		<div class="flex flex-wrap gap-3 mb-4 print:hidden">
+			<select id="f-tahun"
+				class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-white">
+				<option value="">Semua Tahun Ajaran</option>
+			</select>
+			<select id="f-periode"
+				class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-white">
+				<option value="">Semua Periode</option>
+			</select>
+			<select id="f-status"
+				class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-white">
+				<option value="">Semua Status</option>
+				<option value="draft">Draft</option>
+				<option value="posted">Ditagih</option>
+				<option value="paid">Lunas</option>
+				<option value="cancelled">Dibatalkan</option>
+			</select>
+		</div>
+
+		<!-- Tabel Ringkasan Tagihan -->
+		<div class="rounded-xl border border-slate-200 overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+					<tr>
+						<th class="px-3 py-2">Siswa</th>
+						<th class="px-3 py-2">Komponen</th>
+						<th class="px-3 py-2">Periode</th>
+						<th class="px-3 py-2 text-right">Total</th>
+						<th class="px-3 py-2 text-right">Terbayar</th>
+						<th class="px-3 py-2 text-right">Sisa</th>
+						<th class="px-3 py-2">Status</th>
+					</tr>
+				</thead>
+				<tbody id="r-body"></tbody>
+				<tfoot id="r-foot" class="border-t bg-slate-50 font-semibold text-sm"></tfoot>
+			</table>
+		</div>
+		<p id="r-info" class="mt-2 text-xs text-slate-400 print:hidden"></p>
+	</div>
+
+	<!-- ═══════════════════ TAB: TUNGGAKAN ═══════════════════ -->
+	<div id="tab-tunggakan" class="hidden">
+		<p class="text-sm text-slate-500 mb-4">
+			Daftar siswa yang masih memiliki tagihan belum lunas, diurutkan berdasarkan jumlah tunggakan terbesar.
+		</p>
+		<div class="rounded-xl border border-slate-200 overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+					<tr>
+						<th class="px-3 py-2">#</th>
+						<th class="px-3 py-2">Nama Siswa</th>
+						<th class="px-3 py-2 text-right">Jumlah Tagihan</th>
+						<th class="px-3 py-2 text-right">Total Tagihan</th>
+						<th class="px-3 py-2 text-right">Sudah Bayar</th>
+						<th class="px-3 py-2 text-right">Tunggakan</th>
+					<th class="px-3 py-2 print:hidden"></th>
+					</tr>
+				</thead>
+				<tbody id="t-body"></tbody>
+				<tfoot id="t-foot" class="border-t bg-slate-50 font-semibold text-sm"></tfoot>
+			</table>
+		</div>
+	</div>
+
+	<!-- ═══════════════════ TAB: REKAP PEMBAYARAN ═══════════════════ -->
+	<div id="tab-pembayaran" class="hidden">
+		<!-- Filter tanggal -->
+		<div class="flex flex-wrap items-center gap-3 mb-4 print:hidden">
+			<div class="flex items-center gap-2 text-sm">
+				<label class="text-slate-500">Dari</label>
+				<input type="date" id="p-dari"
+					class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+			</div>
+			<div class="flex items-center gap-2 text-sm">
+				<label class="text-slate-500">s/d</label>
+				<input type="date" id="p-sampai"
+					class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+			</div>
+			<button id="p-filter-btn"
+				class="rounded-lg bg-[var(--brand)] px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 transition">
+				Tampilkan
+			</button>
+		</div>
+
+		<!-- KPI -->
+		<div class="grid gap-4 sm:grid-cols-3 mb-4">
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Jumlah Transaksi</p>
+				<p id="p-count" class="mt-2 text-2xl font-black">—</p>
+			</article>
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Diterima</p>
+				<p id="p-total" class="mt-2 text-2xl font-black text-green-600">—</p>
+			</article>
+			<article class="rounded-xl border border-slate-200 p-4">
+				<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Sisa Belum Terlunasi</p>
+				<p id="p-due" class="mt-2 text-2xl font-black text-red-500">—</p>
+			</article>
+		</div>
+
+		<div class="rounded-xl border border-slate-200 overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+					<tr>
+						<th class="px-3 py-2">Tanggal</th>
+						<th class="px-3 py-2">No. Bayar</th>
+						<th class="px-3 py-2">Siswa</th>
+						<th class="px-3 py-2 text-right">Total Tagihan</th>
+						<th class="px-3 py-2 text-right">Dibayar</th>
+						<th class="px-3 py-2 text-right">Sisa</th>
+						<th class="px-3 py-2">Status</th>
+						<th class="px-3 py-2 print:hidden"></th>
+					</tr>
+				</thead>
+				<tbody id="p-body"></tbody>
+				<tfoot id="p-foot" class="border-t bg-slate-50 font-semibold text-sm"></tfoot>
+			</table>
+		</div>
+	</div>
+
+	<!-- ═══════════════════ TAB: CETAK INVOICE ═══════════════════ -->
+	<div id="tab-invoice" class="hidden">
+		<p class="text-sm text-slate-500 mb-5">
+			Pilih jenis dokumen dan siswa, lalu klik <strong>Pratinjau</strong> untuk melihat dan mencetak.
+		</p>
+		<div class="grid gap-4 sm:grid-cols-3 mb-5">
+			<div>
+				<label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Dokumen</label>
+				<select id="inv-type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+					<option value="tagihan">Surat Tagihan (Invoice)</option>
+					<option value="kwitansi">Kwitansi Pembayaran Terakhir</option>
+				</select>
+			</div>
+			<div>
+				<label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa</label>
+				<select id="inv-student" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+					<option value="">Pilih siswa...</option>
+				</select>
+			</div>
+			<div class="flex items-end">
+				<button id="inv-preview-btn"
+					class="w-full rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white hover:bg-teal-700 transition disabled:opacity-40"
+					disabled>
+					Pratinjau & Cetak
+				</button>
+			</div>
+		</div>
+		<div id="inv-hint" class="rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+			Pilih jenis dokumen dan siswa untuk melihat pratinjau.
+		</div>
+	</div>
+
+	<!-- ═══════════════════ PRINT MODAL ═══════════════════ -->
+	<div id="print-modal" class="hidden fixed inset-0 z-50 bg-white overflow-auto">
+		<div class="max-w-2xl mx-auto p-8">
+			<!-- Toolbar (disembunyikan saat print) -->
+			<div class="flex items-center justify-between mb-6 print:hidden">
+				<h2 class="text-lg font-bold">Pratinjau Dokumen</h2>
+				<div class="flex gap-2">
+					<button onclick="window.print()"
+						class="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white hover:bg-teal-700">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+							<path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H6v2h8v-2h-1a1 1 0 01-1-1V9H8v3a1 1 0 01-1 1z" clip-rule="evenodd"/>
+						</svg>
+						Cetak / Export PDF
+					</button>
+					<button id="modal-close"
+						class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-slate-50">
+						Tutup
+					</button>
+				</div>
+			</div>
+			<!-- Konten invoice digenerate di sini -->
+			<div id="invoice-content" class="border border-slate-200 rounded-xl p-8 print:border-0 print:p-0"></div>
+		</div>
+	</div>
+
+	<script>
+		import { supabase } from "../../lib/supabase";
+
+		const idr = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+		const pct = (n: number, d: number) => d === 0 ? "0%" : (n / d * 100).toFixed(1) + "%";
+
+		const STATUS_BADGE: Record<string, string> = {
+			draft: "bg-slate-100 text-slate-600",
+			posted: "bg-blue-100 text-blue-700",
+			paid: "bg-green-100 text-green-700",
+			cancelled: "bg-red-100 text-red-600",
+		};
+		const STATUS_LABEL: Record<string, string> = {
+			draft: "Draft", posted: "Ditagih", paid: "Lunas", cancelled: "Dibatalkan",
+		};
+		const STATE_BADGE: Record<string, string> = {
+			draft: "bg-slate-100 text-slate-600",
+			partial: "bg-amber-100 text-amber-700",
+			paid: "bg-green-100 text-green-700",
+			done: "bg-blue-100 text-blue-700",
+		};
+		const STATE_LABEL: Record<string, string> = {
+			draft: "Draft", partial: "Sebagian", paid: "Lunas", done: "Selesai",
+		};
+
+		// ─── Helpers ───────────────────────────────────────────────────────────────
+		const fmtDate = (d: string) => {
+			const [y, m, day] = d.split("-");
+			return `${day}/${m}/${y}`;
+		};
+		const schoolHeader = () => `
+			<div class="text-center mb-6 pb-4 border-b-2 border-slate-800">
+				<h1 class="text-xl font-black uppercase tracking-wide">Areta School</h1>
+				<p class="text-xs text-slate-500 mt-0.5">Sistem Pembayaran SPP</p>
+			</div>`;
+
+		// ─── Print modal ───────────────────────────────────────────────────────────
+		const printModal   = document.getElementById("print-modal")!;
+		const invoiceContent = document.getElementById("invoice-content")!;
+
+		function openModal(html: string) {
+			invoiceContent.innerHTML = html;
+			printModal.classList.remove("hidden");
+			document.body.style.overflow = "hidden";
+		}
+		document.getElementById("modal-close")!.addEventListener("click", () => {
+			printModal.classList.add("hidden");
+			document.body.style.overflow = "";
+		});
+
+		// ─── Cetak Kwitansi (dari payment_id) ─────────────────────────────────────
+		async function cetakKwitansi(paymentId: string) {
+			const { data: pay, error: e1 } = await supabase
+				.from("payments")
+				.select("id,payment_no,payment_date,state,amount_total,amount_paid,amount_due,students(name,nis)")
+				.eq("id", paymentId)
+				.single();
+			if (e1 || !pay) return alert("Gagal memuat data pembayaran.");
+
+			const { data: lines, error: e2 } = await supabase
+				.from("payment_lines")
+				.select("amount_paid,amount_residual,invoices(total_amount,components(name),billing_periods(name))")
+				.eq("payment_id", paymentId);
+			if (e2) return alert("Gagal memuat rincian pembayaran.");
+
+			const student = (pay.students as any);
+			const tanggal = fmtDate(pay.payment_date);
+			const rows = (lines || []).map((l: any) => `
+				<tr class="border-b border-slate-200">
+					<td class="py-2 pr-4">${l.invoices?.components?.name ?? "-"}</td>
+					<td class="py-2 pr-4 text-slate-500">${l.invoices?.billing_periods?.name ?? "-"}</td>
+					<td class="py-2 text-right font-medium">${idr.format(Number(l.amount_paid || 0))}</td>
+				</tr>`).join("");
+
+			openModal(`
+				${schoolHeader()}
+				<div class="flex justify-between mb-6">
+					<div>
+						<p class="text-xs text-slate-500 uppercase tracking-wide">Kwitansi Pembayaran</p>
+						<p class="text-lg font-black mt-0.5">${pay.payment_no ?? "-"}</p>
+					</div>
+					<div class="text-right">
+						<p class="text-xs text-slate-500">Tanggal</p>
+						<p class="font-semibold">${tanggal}</p>
+					</div>
+				</div>
+				<div class="bg-slate-50 rounded-lg p-4 mb-5">
+					<p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Diterima dari</p>
+					<p class="font-bold text-base">${student?.name ?? "-"}</p>
+					${student?.nis ? `<p class="text-xs text-slate-500">NIS: ${student.nis}</p>` : ""}
+				</div>
+				<table class="w-full text-sm mb-5">
+					<thead>
+						<tr class="border-b-2 border-slate-800">
+							<th class="py-2 pr-4 text-left text-xs uppercase">Komponen</th>
+							<th class="py-2 pr-4 text-left text-xs uppercase">Periode</th>
+							<th class="py-2 text-right text-xs uppercase">Dibayar</th>
+						</tr>
+					</thead>
+					<tbody>${rows || '<tr><td colspan="3" class="py-3 text-slate-400 text-center">Tidak ada rincian.</td></tr>'}</tbody>
+				</table>
+				<div class="border-t-2 border-slate-800 pt-3 flex justify-between items-center">
+					<span class="font-bold">Total Dibayar</span>
+					<span class="text-xl font-black text-green-700">${idr.format(Number(pay.amount_paid || 0))}</span>
+				</div>
+				${Number(pay.amount_due) > 0 ? `
+				<div class="flex justify-between items-center mt-1 text-sm">
+					<span class="text-slate-500">Sisa Tagihan</span>
+					<span class="text-red-600 font-semibold">${idr.format(Number(pay.amount_due))}</span>
+				</div>` : ""}
+				<div class="mt-10 grid grid-cols-2 gap-8 text-sm text-center">
+					<div>
+						<p class="text-slate-500 mb-12">Penerima,</p>
+						<p class="font-semibold border-t border-slate-400 pt-1">__________________</p>
+					</div>
+					<div>
+						<p class="text-slate-500 mb-12">Pembayar,</p>
+						<p class="font-semibold border-t border-slate-400 pt-1">${student?.name ?? "__________________"}</p>
+					</div>
+				</div>`);
+		}
+
+		// ─── Cetak Tagihan (dari student_id) ──────────────────────────────────────
+		async function cetakTagihan(studentId: string, studentName: string) {
+			const { data: invoices, error } = await supabase
+				.from("invoices")
+				.select("id,total_amount,paid_amount,status,components(name),billing_periods(name)")
+				.eq("student_id", studentId)
+				.in("status", ["draft", "posted"])
+				.order("created_at", { ascending: true });
+			if (error) return alert("Gagal memuat data tagihan.");
+
+			const today = fmtDate(new Date().toISOString().slice(0, 10));
+			const rows = (invoices || []).map((inv: any) => {
+				const sisa = Number(inv.total_amount || 0) - Number(inv.paid_amount || 0);
+				return `<tr class="border-b border-slate-200">
+					<td class="py-2 pr-4">${inv.components?.name ?? "-"}</td>
+					<td class="py-2 pr-4 text-slate-500">${inv.billing_periods?.name ?? "-"}</td>
+					<td class="py-2 pr-4 text-right">${idr.format(Number(inv.total_amount || 0))}</td>
+					<td class="py-2 pr-4 text-right text-green-700">${idr.format(Number(inv.paid_amount || 0))}</td>
+					<td class="py-2 text-right font-semibold text-red-600">${idr.format(sisa)}</td>
+				</tr>`;
+			}).join("");
+
+			const grandTotal = (invoices || []).reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0);
+			const grandPaid  = (invoices || []).reduce((s: number, r: any) => s + Number(r.paid_amount || 0), 0);
+			const grandSisa  = grandTotal - grandPaid;
+
+			openModal(`
+				${schoolHeader()}
+				<div class="flex justify-between mb-6">
+					<div>
+						<p class="text-xs text-slate-500 uppercase tracking-wide">Surat Tagihan</p>
+						<p class="text-lg font-black mt-0.5">INV / ${today.replace(/\//g, ".")}</p>
+					</div>
+					<div class="text-right">
+						<p class="text-xs text-slate-500">Tanggal</p>
+						<p class="font-semibold">${today}</p>
+					</div>
+				</div>
+				<div class="bg-slate-50 rounded-lg p-4 mb-5">
+					<p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Kepada</p>
+					<p class="font-bold text-base">${studentName}</p>
+				</div>
+				<table class="w-full text-sm mb-5">
+					<thead>
+						<tr class="border-b-2 border-slate-800">
+							<th class="py-2 pr-4 text-left text-xs uppercase">Komponen</th>
+							<th class="py-2 pr-4 text-left text-xs uppercase">Periode</th>
+							<th class="py-2 pr-4 text-right text-xs uppercase">Total</th>
+							<th class="py-2 pr-4 text-right text-xs uppercase">Dibayar</th>
+							<th class="py-2 text-right text-xs uppercase">Sisa</th>
+						</tr>
+					</thead>
+					<tbody>${rows || '<tr><td colspan="5" class="py-3 text-green-600 text-center font-semibold">Tidak ada tunggakan.</td></tr>'}</tbody>
+				</table>
+				<div class="border-t-2 border-slate-800 pt-3 space-y-1">
+					<div class="flex justify-between text-sm">
+						<span>Total Tagihan</span>
+						<span class="font-semibold">${idr.format(grandTotal)}</span>
+					</div>
+					<div class="flex justify-between text-sm">
+						<span>Sudah Dibayar</span>
+						<span class="font-semibold text-green-700">${idr.format(grandPaid)}</span>
+					</div>
+					<div class="flex justify-between text-base font-black mt-1 pt-1 border-t border-slate-300">
+						<span>Total Tunggakan</span>
+						<span class="text-red-600">${idr.format(grandSisa)}</span>
+					</div>
+				</div>
+				<p class="mt-6 text-xs text-slate-400 text-center">
+					Harap segera melakukan pembayaran. Terima kasih.
+				</p>`);
+		}
+
+		// ─── Tab switching ─────────────────────────────────────────────────────────
+		const tabs = ["ringkasan", "tunggakan", "pembayaran", "invoice"];
+		document.querySelectorAll(".tab-btn").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				const target = (btn as HTMLElement).dataset.tab!;
+				tabs.forEach((t) => {
+					const panel = document.getElementById(`tab-${t}`)!;
+					const button = document.querySelector(`[data-tab="${t}"]`)!;
+					const isActive = t === target;
+					panel.classList.toggle("hidden", !isActive);
+					button.classList.toggle("border-[var(--brand)]", isActive);
+					button.classList.toggle("text-[var(--brand)]", isActive);
+					button.classList.toggle("border-transparent", !isActive);
+					button.classList.toggle("text-slate-500", !isActive);
+				});
+				if (target === "tunggakan") loadTunggakan();
+				if (target === "pembayaran") loadRekap();
+				if (target === "invoice")    loadInvStudents();
+			});
+		});
+
+		// ─── TAB 1: RINGKASAN ──────────────────────────────────────────────────────
+		const fTahun   = document.getElementById("f-tahun")   as HTMLSelectElement;
+		const fPeriode = document.getElementById("f-periode") as HTMLSelectElement;
+		const fStatus  = document.getElementById("f-status")  as HTMLSelectElement;
+
+		async function loadFilters() {
+			const [years, periods] = await Promise.all([
+				supabase.from("academic_years").select("id,name").order("name", { ascending: false }),
+				supabase.from("billing_periods").select("id,name,start_date").order("start_date", { ascending: false }),
+			]);
+			(years.data || []).forEach((y) => {
+				fTahun.innerHTML += `<option value="${y.id}">${y.name}</option>`;
+			});
+			(periods.data || []).forEach((p) => {
+				fPeriode.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+			});
+		}
+
+		async function loadRingkasan() {
+			let query = supabase
+				.from("invoices")
+				.select("id,status,total_amount,paid_amount,students(name),components(name),billing_periods(id,name,academic_year_id)");
+
+			if (fStatus.value)  query = query.eq("status", fStatus.value);
+			if (fPeriode.value) query = query.eq("period_id", fPeriode.value);
+			if (fTahun.value) {
+				// Filter via billing_periods.academic_year_id
+				const { data: periods } = await supabase
+					.from("billing_periods")
+					.select("id")
+					.eq("academic_year_id", fTahun.value);
+				const ids = (periods || []).map((p) => p.id);
+				if (ids.length) query = query.in("period_id", ids);
+				else {
+					renderRingkasan([], 0, 0, 0, 0, 0, 0);
+					return;
+				}
+			}
+
+			const { data, error } = await query.order("created_at", { ascending: false });
+			if (error) {
+				document.getElementById("r-body")!.innerHTML =
+					`<tr><td colspan="7" class="px-3 py-3 text-red-600">${error.message}</td></tr>`;
+				return;
+			}
+
+			const rows = data || [];
+			const active = rows.filter((r) => r.status !== "cancelled");
+			const totalAmt   = active.reduce((s, r) => s + Number(r.total_amount || 0), 0);
+			const paidAmt    = active.reduce((s, r) => s + Number(r.paid_amount || 0), 0);
+			const outstanding = totalAmt - paidAmt;
+			const paidCount  = active.filter((r) => r.status === "paid").length;
+
+			renderRingkasan(rows, rows.length, active.length, totalAmt, paidAmt, outstanding, paidCount);
+		}
+
+		function renderRingkasan(
+			rows: any[], _total: number, active: number,
+			totalAmt: number, paidAmt: number, outstanding: number, paidCount: number
+		) {
+			document.getElementById("r-total")!.textContent = idr.format(totalAmt);
+			document.getElementById("r-total-count")!.textContent = `${active} tagihan aktif`;
+			document.getElementById("r-paid")!.textContent = idr.format(paidAmt);
+			document.getElementById("r-paid-count")!.textContent = `${paidCount} tagihan lunas`;
+			document.getElementById("r-outstanding")!.textContent = idr.format(outstanding);
+			document.getElementById("r-outstanding-count")!.textContent =
+				`${active - paidCount} tagihan belum lunas`;
+			document.getElementById("r-rate")!.textContent = pct(paidAmt, totalAmt);
+			document.getElementById("r-info")!.textContent =
+				`Menampilkan ${rows.length} tagihan`;
+
+			const body = document.getElementById("r-body")!;
+			if (!rows.length) {
+				body.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-slate-400">Tidak ada data.</td></tr>`;
+				document.getElementById("r-foot")!.innerHTML = "";
+				return;
+			}
+
+			body.innerHTML = rows.map((r) => {
+				const sisa = Number(r.total_amount || 0) - Number(r.paid_amount || 0);
+				const badge = STATUS_BADGE[r.status] ?? "bg-slate-100 text-slate-600";
+				const label = STATUS_LABEL[r.status] ?? r.status;
+				return `<tr class="border-b ${r.status === "cancelled" ? "opacity-40" : ""}">
+					<td class="px-3 py-2">${r.students?.name ?? "-"}</td>
+					<td class="px-3 py-2">${r.components?.name ?? "-"}</td>
+					<td class="px-3 py-2">${r.billing_periods?.name ?? "-"}</td>
+					<td class="px-3 py-2 text-right">${idr.format(Number(r.total_amount || 0))}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(Number(r.paid_amount || 0))}</td>
+					<td class="px-3 py-2 text-right ${sisa > 0 ? "text-red-600" : ""}">${idr.format(sisa)}</td>
+					<td class="px-3 py-2">
+						<span class="rounded-full px-2 py-0.5 text-xs font-medium ${badge}">${label}</span>
+					</td>
+				</tr>`;
+			}).join("");
+
+			const activeRows = rows.filter((r) => r.status !== "cancelled");
+			const footTotal  = activeRows.reduce((s, r) => s + Number(r.total_amount || 0), 0);
+			const footPaid   = activeRows.reduce((s, r) => s + Number(r.paid_amount || 0), 0);
+			document.getElementById("r-foot")!.innerHTML = `
+				<tr>
+					<td class="px-3 py-2" colspan="3">Total (${activeRows.length} tagihan aktif)</td>
+					<td class="px-3 py-2 text-right">${idr.format(footTotal)}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(footPaid)}</td>
+					<td class="px-3 py-2 text-right text-red-600">${idr.format(footTotal - footPaid)}</td>
+					<td></td>
+				</tr>`;
+		}
+
+		[fTahun, fPeriode, fStatus].forEach((el) => el.addEventListener("change", loadRingkasan));
+
+		// ─── TAB 2: TUNGGAKAN ──────────────────────────────────────────────────────
+		async function loadTunggakan() {
+			const tBody = document.getElementById("t-body")!;
+			tBody.innerHTML = `<tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">Memuat...</td></tr>`;
+
+			const { data, error } = await supabase
+				.from("invoices")
+				.select("student_id,total_amount,paid_amount,students(name)")
+				.in("status", ["draft", "posted"]);
+
+			if (error) {
+				tBody.innerHTML = `<tr><td colspan="6" class="px-3 py-3 text-red-600">${error.message}</td></tr>`;
+				return;
+			}
+
+			// Agregasi per siswa
+			const map = new Map<string, { studentId: string; name: string; count: number; total: number; paid: number }>();
+			(data || []).forEach((r) => {
+				const key = r.student_id;
+				if (!map.has(key)) {
+					map.set(key, { studentId: key, name: (r.students as any)?.name ?? "-", count: 0, total: 0, paid: 0 });
+				}
+				const entry = map.get(key)!;
+				entry.count++;
+				entry.total += Number(r.total_amount || 0);
+				entry.paid  += Number(r.paid_amount || 0);
+			});
+
+			// Sort by outstanding DESC
+			const sorted = [...map.values()].sort((a, b) => (b.total - b.paid) - (a.total - a.paid));
+
+			if (!sorted.length) {
+				tBody.innerHTML = `<tr><td colspan="6" class="px-3 py-4 text-center text-green-600 font-semibold">Semua tagihan sudah lunas!</td></tr>`;
+				document.getElementById("t-foot")!.innerHTML = "";
+				return;
+			}
+
+			tBody.innerHTML = sorted.map((row, i) => {
+				const tunggakan = row.total - row.paid;
+				return `<tr class="border-b">
+					<td class="px-3 py-2 text-slate-400">${i + 1}</td>
+					<td class="px-3 py-2 font-medium">${row.name}</td>
+					<td class="px-3 py-2 text-right">${row.count}</td>
+					<td class="px-3 py-2 text-right">${idr.format(row.total)}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(row.paid)}</td>
+					<td class="px-3 py-2 text-right font-semibold text-red-600">${idr.format(tunggakan)}</td>
+					<td class="px-3 py-2 print:hidden">
+						<button data-sid="${row.studentId}" data-sname="${row.name}" data-action="tagihan"
+							class="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 whitespace-nowrap">
+							Cetak Tagihan
+						</button>
+					</td>
+				</tr>`;
+			}).join("");
+
+			const grandTotal    = sorted.reduce((s, r) => s + r.total, 0);
+			const grandPaid     = sorted.reduce((s, r) => s + r.paid, 0);
+			const grandTunggakan = grandTotal - grandPaid;
+			document.getElementById("t-foot")!.innerHTML = `
+				<tr>
+					<td class="px-3 py-2" colspan="2">Total (${sorted.length} siswa)</td>
+					<td class="px-3 py-2 text-right">${sorted.reduce((s, r) => s + r.count, 0)}</td>
+					<td class="px-3 py-2 text-right">${idr.format(grandTotal)}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(grandPaid)}</td>
+					<td class="px-3 py-2 text-right text-red-600">${idr.format(grandTunggakan)}</td>
+				</tr>`;
+		}
+
+		// ─── TAB 3: REKAP PEMBAYARAN ───────────────────────────────────────────────
+		const pDari   = document.getElementById("p-dari")    as HTMLInputElement;
+		const pSampai = document.getElementById("p-sampai")  as HTMLInputElement;
+
+		// Default: bulan ini
+		const now = new Date();
+		pDari.value   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+		pSampai.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+		async function loadRekap() {
+			const pBody = document.getElementById("p-body")!;
+			pBody.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-slate-400">Memuat...</td></tr>`;
+
+			let query = supabase
+				.from("payments")
+				.select("id,payment_no,payment_date,state,amount_total,amount_paid,amount_due,students(name)")
+				.order("payment_date", { ascending: false })
+				.order("created_at", { ascending: false });
+
+			if (pDari.value)   query = query.gte("payment_date", pDari.value);
+			if (pSampai.value) query = query.lte("payment_date", pSampai.value);
+
+			const { data, error } = await query;
+			if (error) {
+				pBody.innerHTML = `<tr><td colspan="7" class="px-3 py-3 text-red-600">${error.message}</td></tr>`;
+				return;
+			}
+
+			const rows = data || [];
+			const totalDiterima = rows.reduce((s, r) => s + Number(r.amount_paid || 0), 0);
+			const totalDue      = rows.reduce((s, r) => s + Number(r.amount_due || 0), 0);
+
+			document.getElementById("p-count")!.textContent = `${rows.length} transaksi`;
+			document.getElementById("p-total")!.textContent = idr.format(totalDiterima);
+			document.getElementById("p-due")!.textContent   = idr.format(totalDue);
+
+			if (!rows.length) {
+				pBody.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-slate-400">Tidak ada data pembayaran pada periode ini.</td></tr>`;
+				document.getElementById("p-foot")!.innerHTML = "";
+				return;
+			}
+
+			pBody.innerHTML = rows.map((r) => {
+				const badge = STATE_BADGE[r.state] ?? "bg-slate-100 text-slate-600";
+				const label = STATE_LABEL[r.state] ?? r.state;
+				return `<tr class="border-b">
+					<td class="px-3 py-2">${fmtDate(r.payment_date)}</td>
+					<td class="px-3 py-2 font-mono text-xs">${r.payment_no ?? "-"}</td>
+					<td class="px-3 py-2">${(r.students as any)?.name ?? "-"}</td>
+					<td class="px-3 py-2 text-right">${idr.format(Number(r.amount_total || 0))}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(Number(r.amount_paid || 0))}</td>
+					<td class="px-3 py-2 text-right ${Number(r.amount_due) > 0 ? "text-red-600" : ""}">${idr.format(Number(r.amount_due || 0))}</td>
+					<td class="px-3 py-2">
+						<span class="rounded-full px-2 py-0.5 text-xs font-medium ${badge}">${label}</span>
+					</td>
+					<td class="px-3 py-2 print:hidden">
+						<button data-pid="${r.id}" data-action="kwitansi"
+							class="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 whitespace-nowrap">
+							Cetak Kwitansi
+						</button>
+					</td>
+				</tr>`;
+			}).join("");
+
+			document.getElementById("p-foot")!.innerHTML = `
+				<tr>
+					<td class="px-3 py-2" colspan="3">Total (${rows.length} transaksi)</td>
+					<td class="px-3 py-2 text-right">${idr.format(rows.reduce((s, r) => s + Number(r.amount_total || 0), 0))}</td>
+					<td class="px-3 py-2 text-right text-green-700">${idr.format(totalDiterima)}</td>
+					<td class="px-3 py-2 text-right text-red-600">${idr.format(totalDue)}</td>
+					<td></td>
+				</tr>`;
+		}
+
+		document.getElementById("p-filter-btn")!.addEventListener("click", loadRekap);
+
+		// Event delegation: tombol Cetak di tabel Rekap & Tunggakan
+		document.getElementById("p-body")!.addEventListener("click", (e) => {
+			const btn = (e.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
+			if (btn?.dataset.action === "kwitansi") cetakKwitansi(btn.dataset.pid!);
+		});
+		document.getElementById("t-body")!.addEventListener("click", (e) => {
+			const btn = (e.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
+			if (btn?.dataset.action === "tagihan") cetakTagihan(btn.dataset.sid!, btn.dataset.sname!);
+		});
+
+		// ─── TAB 4: CETAK INVOICE (standalone) ────────────────────────────────────
+		const invType        = document.getElementById("inv-type")       as HTMLSelectElement;
+		const invStudent     = document.getElementById("inv-student")    as HTMLSelectElement;
+		const invPreviewBtn  = document.getElementById("inv-preview-btn") as HTMLButtonElement;
+
+		async function loadInvStudents() {
+			if (invStudent.options.length > 1) return; // sudah dimuat
+			const { data } = await supabase.from("students").select("id,name").order("name");
+			(data || []).forEach((s) => {
+				invStudent.innerHTML += `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`;
+			});
+		}
+
+		invStudent.addEventListener("change", () => {
+			invPreviewBtn.disabled = !invStudent.value;
+		});
+
+		invPreviewBtn.addEventListener("click", async () => {
+			const sid   = invStudent.value;
+			const sname = invStudent.selectedOptions[0]?.text ?? "";
+			if (!sid) return;
+
+			if (invType.value === "tagihan") {
+				await cetakTagihan(sid, sname);
+			} else {
+				// Kwitansi: ambil pembayaran terakhir siswa
+				const { data: lastPay } = await supabase
+					.from("payments")
+					.select("id")
+					.eq("student_id", sid)
+					.order("created_at", { ascending: false })
+					.limit(1)
+					.maybeSingle();
+				if (!lastPay) return alert("Siswa ini belum memiliki riwayat pembayaran.");
+				await cetakKwitansi(lastPay.id);
+			}
+		});
+
+		// ─── Init ──────────────────────────────────────────────────────────────────
+		await loadFilters();
+		await loadRingkasan();
+	</script>
+
+	<style>
+		@media print {
+			/* Saat modal terbuka: cetak hanya konten modal */
+			body:has(#print-modal:not(.hidden)) > * { display: none !important; }
+			body:has(#print-modal:not(.hidden)) #print-modal { display: block !important; position: static !important; }
+			#print-modal .print\:hidden { display: none !important; }
+
+			/* Fallback: cetak laporan biasa */
+			.print\:hidden { display: none !important; }
+			body { background: white; }
+			table { font-size: 11px; }
+		}
+	</style>
+</AppLayout>

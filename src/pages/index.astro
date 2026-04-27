@@ -1,11 +1,139 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import AppLayout from "../layouts/AppLayout.astro";
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<AppLayout title="Dashboard">
+	<header class="mb-6 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Dashboard</p>
+			<h2 class="text-3xl font-black">Ringkasan SPP Siswa</h2>
+		</div>
+	</header>
+
+	<div id="env-error" class="hidden mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></div>
+
+	<section class="grid gap-4 md:grid-cols-4">
+		<article class="rounded-xl border border-slate-200 p-4">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Siswa</p>
+			<p id="stat-students" class="mt-2 text-3xl font-black">-</p>
+		</article>
+		<article class="rounded-xl border border-slate-200 p-4">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Tagihan Belum Lunas</p>
+			<p id="stat-invoices" class="mt-2 text-3xl font-black">-</p>
+		</article>
+		<article class="rounded-xl border border-slate-200 p-4">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Tagihan</p>
+			<p id="stat-total" class="mt-2 text-3xl font-black">-</p>
+		</article>
+		<article class="rounded-xl border border-slate-200 p-4">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Outstanding</p>
+			<p id="stat-outstanding" class="mt-2 text-3xl font-black">-</p>
+		</article>
+	</section>
+
+	<section class="mt-6 rounded-xl border border-slate-200 p-4">
+		<div class="mb-3 flex items-center justify-between">
+			<h3 class="text-lg font-bold">Tagihan Terbaru</h3>
+			<a class="text-sm font-semibold text-[var(--brand)] hover:underline" href="/tagihan">Kelola tagihan →</a>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+					<tr>
+						<th class="px-3 py-2">Siswa</th>
+						<th class="px-3 py-2">Komponen</th>
+						<th class="px-3 py-2">Periode</th>
+						<th class="px-3 py-2">Total</th>
+						<th class="px-3 py-2">Terbayar</th>
+						<th class="px-3 py-2">Status</th>
+					</tr>
+				</thead>
+				<tbody id="invoice-body"></tbody>
+			</table>
+		</div>
+	</section>
+
+	<script>
+		import { createClient } from "@supabase/supabase-js";
+
+		const url = import.meta.env.PUBLIC_SUPABASE_URL;
+		const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+		if (!url || !key || url.includes("YOUR_PROJECT")) {
+			const el = document.getElementById("env-error");
+			el.textContent = "Konfigurasi Supabase belum diisi. Set PUBLIC_SUPABASE_URL dan PUBLIC_SUPABASE_ANON_KEY di file .env";
+			el.classList.remove("hidden");
+		}
+
+		const supabase = createClient(url, key);
+		const idr = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+
+		const STATUS_BADGE = {
+			draft: "bg-slate-100 text-slate-600",
+			posted: "bg-blue-100 text-blue-700",
+			paid: "bg-green-100 text-green-700",
+			cancelled: "bg-red-100 text-red-600",
+		};
+		const STATUS_LABEL = { draft: "Draft", posted: "Ditagih", paid: "Lunas", cancelled: "Batal" };
+
+		async function loadStats() {
+			const [students, invoices, totals] = await Promise.all([
+				supabase.from("students").select("id", { count: "exact", head: true }),
+				supabase
+					.from("invoices")
+					.select("id", { count: "exact", head: true })
+					.neq("status", "paid")
+					.neq("status", "cancelled"),
+				supabase.from("invoices").select("total_amount,paid_amount").neq("status", "cancelled"),
+			]);
+
+			const agg = (totals.data || []).reduce(
+				(acc, item) => {
+					acc.total += Number(item.total_amount || 0);
+					acc.outstanding += Number(item.total_amount || 0) - Number(item.paid_amount || 0);
+					return acc;
+				},
+				{ total: 0, outstanding: 0 },
+			);
+
+			document.getElementById("stat-students").textContent = String(students.count ?? 0);
+			document.getElementById("stat-invoices").textContent = String(invoices.count ?? 0);
+			document.getElementById("stat-total").textContent = idr.format(agg.total);
+			document.getElementById("stat-outstanding").textContent = idr.format(agg.outstanding);
+		}
+
+		async function loadLatestInvoices() {
+			const body = document.getElementById("invoice-body");
+			const { data, error } = await supabase
+				.from("invoices")
+				.select("id,status,total_amount,paid_amount,students(name),components(name),billing_periods(name)")
+				.order("created_at", { ascending: false })
+				.limit(10);
+
+			if (error) {
+				body.innerHTML = `<tr><td class="px-3 py-3 text-red-600" colspan="6">${error.message}</td></tr>`;
+				return;
+			}
+
+			body.innerHTML = (data || [])
+				.map((row) => {
+					const badge = STATUS_BADGE[row.status] ?? "bg-slate-100 text-slate-600";
+					const label = STATUS_LABEL[row.status] ?? row.status;
+					return `<tr class="border-b">
+						<td class="px-3 py-2">${row.students?.name ?? "-"}</td>
+						<td class="px-3 py-2">${row.components?.name ?? "-"}</td>
+						<td class="px-3 py-2">${row.billing_periods?.name ?? "-"}</td>
+						<td class="px-3 py-2">${idr.format(Number(row.total_amount || 0))}</td>
+						<td class="px-3 py-2">${idr.format(Number(row.paid_amount || 0))}</td>
+						<td class="px-3 py-2">
+							<span class="rounded-full px-2 py-0.5 text-xs font-medium ${badge}">${label}</span>
+						</td>
+					</tr>`;
+				})
+				.join("");
+		}
+
+		await loadStats();
+		await loadLatestInvoices();
+	</script>
+</AppLayout>

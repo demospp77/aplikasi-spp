@@ -1,0 +1,391 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Master Siswa">
+	<header class="mb-6">
+		<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Master Data</p>
+		<h2 class="text-3xl font-black">Siswa</h2>
+	</header>
+
+	<section class="grid gap-4 lg:grid-cols-[420px_1fr]">
+		<form id="student-form" class="rounded-xl border border-slate-200 p-4">
+			<h3 id="form-title" class="text-lg font-bold">Tambah Siswa</h3>
+			<input type="hidden" id="edit-id" />
+			<input type="hidden" id="edit-guardian-id" />
+			<div class="mt-4 space-y-3">
+				<input
+					name="name"
+					id="f-name"
+					required
+					placeholder="Nama siswa"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2"
+				/>
+				<input
+					name="nis"
+					id="f-nis"
+					placeholder="NIS"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2"
+				/>
+				<select
+					name="class_id"
+					id="f-class"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"
+				>
+					<option value="">-- Memuat kelas... --</option>
+				</select>
+				<input
+					name="guardian_name"
+					id="f-guardian-name"
+					placeholder="Nama orang tua"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2"
+				/>
+				<input
+					name="guardian_phone"
+					id="f-guardian-phone"
+					placeholder="No HP orang tua"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2"
+				/>
+			</div>
+			<div class="mt-4 flex gap-2">
+				<button
+					type="submit"
+					class="rounded-lg bg-[var(--brand)] px-4 py-2 font-semibold text-white"
+				>
+					Simpan
+				</button>
+				<button
+					type="button"
+					id="btn-cancel"
+					class="hidden rounded-lg border border-slate-300 px-4 py-2 font-semibold"
+				>
+					Batal
+				</button>
+			</div>
+		</form>
+
+		<div class="rounded-xl border border-slate-200 p-4">
+			<div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+				<h3 class="text-lg font-bold">Daftar Siswa</h3>
+				<div class="flex items-center gap-2">
+					<input
+						id="search-input"
+						type="search"
+						placeholder="Cari nama siswa…"
+						class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)]/20"
+					/>
+					<span id="total-label" class="text-xs text-slate-500 whitespace-nowrap"></span>
+				</div>
+			</div>
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="border-b bg-slate-50 text-left text-xs uppercase text-slate-500">
+						<tr>
+							<th class="px-3 py-2">Nama</th>
+							<th class="px-3 py-2">NIS</th>
+							<th class="px-3 py-2">Kelas</th>
+							<th class="px-3 py-2">Orang Tua</th>
+							<th class="px-3 py-2">HP</th>
+							<th class="px-3 py-2">Aksi</th>
+						</tr>
+					</thead>
+					<tbody id="students-body"></tbody>
+				</table>
+			</div>
+			<!-- Pagination -->
+			<div class="mt-3 flex items-center justify-between gap-2">
+				<button id="btn-prev"
+					class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition">
+					← Sebelumnya
+				</button>
+				<span id="page-label" class="text-xs text-slate-500"></span>
+				<button id="btn-next"
+					class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition">
+					Berikutnya →
+				</button>
+			</div>
+		</div>
+	</section>
+
+	<script>
+		import { createClient } from "@supabase/supabase-js";
+
+		const supabase = createClient(
+			import.meta.env.PUBLIC_SUPABASE_URL,
+			import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+		);
+
+		const body = document.getElementById("students-body");
+		const form = document.getElementById("student-form");
+		const formTitle = document.getElementById("form-title");
+		const editIdInput = document.getElementById("edit-id");
+		const editGuardianId = document.getElementById("edit-guardian-id");
+		const btnCancel = document.getElementById("btn-cancel");
+		const classSelect = document.getElementById("f-class");
+		const searchInput = document.getElementById("search-input");
+		const totalLabel = document.getElementById("total-label");
+		const pageLabel = document.getElementById("page-label");
+		const btnPrev = document.getElementById("btn-prev");
+		const btnNext = document.getElementById("btn-next");
+
+		// Simpan data siswa untuk keperluan edit (hindari global onclick + JSON.stringify)
+		const studentMap = new Map();
+
+		// ─── State pagination ──────────────────────────────────────────────────────
+		const PAGE_SIZE = 10;
+		let currentPage = 0; // 0-based
+		let searchQuery = "";
+
+		// ─── Load kelas dari tahun ajaran aktif ────────────────────────────────────
+		async function loadClasses() {
+			const { data: activeYear } = await supabase
+				.from("academic_years")
+				.select("id")
+				.eq("is_active", true)
+				.maybeSingle();
+
+			if (!activeYear) {
+				classSelect.innerHTML = '<option value="">-- Belum ada tahun ajaran aktif --</option>';
+				classSelect.disabled = true;
+				return;
+			}
+
+			const { data: classes, error } = await supabase
+				.from("classes")
+				.select("id,name")
+				.eq("academic_year_id", activeYear.id)
+				.order("name");
+
+			if (error || !classes?.length) {
+				classSelect.innerHTML = '<option value="">-- Belum ada kelas --</option>';
+				classSelect.disabled = true;
+				return;
+			}
+
+			classSelect.disabled = false;
+			classSelect.innerHTML =
+				'<option value="">-- Pilih Kelas --</option>' +
+				classes.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+		}
+
+		// ─── Load daftar siswa dengan pagination & pencarian ──────────────────────
+		async function loadStudents() {
+			const from = currentPage * PAGE_SIZE;
+			const to = from + PAGE_SIZE - 1;
+
+			let query = supabase
+				.from("students")
+				.select("id,name,nis,class_id,guardian_id,classes(name),guardians(name,phone)", { count: "exact" })
+				.order("name")
+				.range(from, to);
+
+			if (searchQuery) {
+				query = query.ilike("name", `%${searchQuery}%`);
+			}
+
+			const { data, error, count } = await query;
+
+			if (error) {
+				body.innerHTML = `<tr><td class="px-3 py-3 text-red-600" colspan="6">${error.message}</td></tr>`;
+				return;
+			}
+
+			// Update label total & halaman
+			const total = count ?? 0;
+			const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+			totalLabel.textContent = `${total} siswa`;
+			pageLabel.textContent = `Halaman ${currentPage + 1} dari ${totalPages}`;
+			btnPrev.disabled = currentPage === 0;
+			btnNext.disabled = currentPage >= totalPages - 1;
+
+			studentMap.clear();
+			(data || []).forEach((s) => studentMap.set(s.id, s));
+
+			if (!data?.length) {
+				body.innerHTML = `<tr><td class="px-3 py-4 text-slate-400 text-center" colspan="6">Tidak ada data siswa.</td></tr>`;
+				return;
+			}
+
+			body.innerHTML = data
+				.map(
+					(item) => `<tr class="border-b">
+						<td class="px-3 py-2">${item.name}</td>
+						<td class="px-3 py-2">${item.nis ?? "-"}</td>
+						<td class="px-3 py-2">${item.classes?.name ?? "-"}</td>
+						<td class="px-3 py-2">${item.guardians?.name ?? "-"}</td>
+						<td class="px-3 py-2">${item.guardians?.phone ?? "-"}</td>
+						<td class="px-3 py-2 space-x-2 whitespace-nowrap">
+							<button data-id="${item.id}" data-action="edit"
+								class="text-blue-600 hover:underline text-xs">Edit</button>
+							<button data-id="${item.id}" data-action="delete"
+								class="text-red-600 hover:underline text-xs">Hapus</button>
+						</td>
+					</tr>`,
+				)
+				.join("");
+		}
+
+		// ─── Event delegation untuk tombol Edit / Hapus ────────────────────────────
+		body.addEventListener("click", async (e) => {
+			const btn = e.target.closest("button[data-action]");
+			if (!btn) return;
+			const { id, action } = btn.dataset;
+			if (action === "edit") handleEdit(id);
+			if (action === "delete") await handleDelete(id);
+		});
+
+		function handleEdit(id) {
+			const item = studentMap.get(id);
+			if (!item) return;
+			formTitle.textContent = "Edit Siswa";
+			editIdInput.value = item.id;
+			editGuardianId.value = item.guardian_id ?? "";
+			document.getElementById("f-name").value = item.name;
+			document.getElementById("f-nis").value = item.nis ?? "";
+			document.getElementById("f-class").value = item.class_id ?? "";
+			document.getElementById("f-guardian-name").value = item.guardians?.name ?? "";
+			document.getElementById("f-guardian-phone").value = item.guardians?.phone ?? "";
+			btnCancel.classList.remove("hidden");
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}
+
+		async function handleDelete(id) {
+			if (!confirm("Hapus siswa ini?")) return;
+			const item = studentMap.get(id);
+			const guardianId = item?.guardian_id;
+
+			const { error } = await supabase.from("students").delete().eq("id", id);
+			if (error) return alert(error.message);
+
+			// Hapus guardian jika sudah tidak direferensikan siswa lain
+			if (guardianId) {
+				const { count } = await supabase
+					.from("students")
+					.select("id", { count: "exact", head: true })
+					.eq("guardian_id", guardianId);
+				if (count === 0) {
+					await supabase.from("guardians").delete().eq("id", guardianId);
+				}
+			}
+
+			await loadStudents();
+		}
+
+		// ─── Reset form ke mode Tambah ─────────────────────────────────────────────
+		function resetForm() {
+			form.reset();
+			editIdInput.value = "";
+			editGuardianId.value = "";
+			formTitle.textContent = "Tambah Siswa";
+			btnCancel.classList.add("hidden");
+		}
+
+		btnCancel.addEventListener("click", resetForm);
+
+		// ─── Submit form (Tambah / Edit) ───────────────────────────────────────────
+		form.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const fd = new FormData(form);
+			const payload = Object.fromEntries(fd.entries());
+			const isEdit = !!editIdInput.value;
+
+			// ── Guardian: update jika edit, cek duplikat phone jika tambah baru ──
+			let guardianId = editGuardianId.value || null;
+
+			if (payload.guardian_name) {
+				if (isEdit && guardianId) {
+					// Update guardian yang sudah ada
+					const { error } = await supabase
+						.from("guardians")
+						.update({ name: payload.guardian_name, phone: payload.guardian_phone || null })
+						.eq("id", guardianId);
+					if (error) return alert(error.message);
+				} else {
+					// Cek apakah guardian dengan nomor HP ini sudah ada
+					let existing = null;
+					if (payload.guardian_phone) {
+						const { data } = await supabase
+							.from("guardians")
+							.select("id")
+							.eq("phone", payload.guardian_phone)
+							.maybeSingle();
+						existing = data;
+					}
+
+					if (existing) {
+						guardianId = existing.id;
+						// Update nama seandainya berubah
+						await supabase
+							.from("guardians")
+							.update({ name: payload.guardian_name })
+							.eq("id", guardianId);
+					} else {
+						const { data, error } = await supabase
+							.from("guardians")
+							.insert({ name: payload.guardian_name, phone: payload.guardian_phone || null })
+							.select("id")
+							.single();
+						if (error) return alert(error.message);
+						guardianId = data.id;
+					}
+				}
+			}
+
+			// ── Ambil academic_year_id dari kelas yang dipilih ─────────────────────
+			let academicYearId = null;
+			if (payload.class_id) {
+				const { data: cls } = await supabase
+					.from("classes")
+					.select("academic_year_id")
+					.eq("id", payload.class_id)
+					.single();
+				academicYearId = cls?.academic_year_id ?? null;
+			}
+
+			const studentData = {
+				name: payload.name,
+				nis: payload.nis || null,
+				class_id: payload.class_id || null,
+				academic_year_id: academicYearId,
+				guardian_id: guardianId,
+			};
+
+			if (isEdit) {
+				const { error } = await supabase
+					.from("students")
+					.update(studentData)
+					.eq("id", editIdInput.value);
+				if (error) return alert(error.message);
+			} else {
+				const { error } = await supabase.from("students").insert(studentData);
+				if (error) return alert(error.message);
+			}
+
+			resetForm();
+			await loadStudents();
+		});
+
+		// ─── Pagination & Search ───────────────────────────────────────────────────
+		btnPrev.addEventListener("click", () => {
+			if (currentPage > 0) { currentPage--; loadStudents(); }
+		});
+		btnNext.addEventListener("click", () => {
+			currentPage++;
+			loadStudents();
+		});
+
+		let searchTimer;
+		searchInput.addEventListener("input", () => {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(() => {
+				searchQuery = searchInput.value.trim();
+				currentPage = 0;
+				loadStudents();
+			}, 350);
+		});
+
+		// ─── Init ──────────────────────────────────────────────────────────────────
+		await loadClasses();
+		await loadStudents();
+	</script>
+</AppLayout>
