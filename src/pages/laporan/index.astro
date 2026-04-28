@@ -219,12 +219,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 	<!-- ═══════════════════ PRINT MODAL ═══════════════════ -->
 	<div id="print-modal" class="hidden fixed inset-0 z-50 bg-white overflow-auto">
-		<div class="max-w-2xl mx-auto p-8">
+		<div class="max-w-[560px] mx-auto p-6">
 			<!-- Toolbar (disembunyikan saat print) -->
 			<div class="flex items-center justify-between mb-6 print:hidden">
 				<h2 class="text-lg font-bold">Pratinjau Dokumen</h2>
 				<div class="flex gap-2">
-					<button onclick="window.print()"
+					<button id="modal-print-btn"
 						class="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-bold text-white hover:bg-teal-700">
 						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
 							<path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H6v2h8v-2h-1a1 1 0 01-1-1V9H8v3a1 1 0 01-1 1z" clip-rule="evenodd"/>
@@ -237,8 +237,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
 					</button>
 				</div>
 			</div>
-			<!-- Konten invoice digenerate di sini -->
-			<div id="invoice-content" class="border border-slate-200 rounded-xl p-8 print:border-0 print:p-0"></div>
+			<!-- Konten invoice digenerate di sini (A5: 148×210mm) -->
+			<div id="invoice-content" class="border border-slate-200 rounded-xl p-6 print:border-0 print:p-0 text-sm"></div>
 		</div>
 	</div>
 
@@ -279,14 +279,43 @@ import AppLayout from "../../layouts/AppLayout.astro";
 			</div>`;
 
 		// ─── Print modal ───────────────────────────────────────────────────────────
-		const printModal   = document.getElementById("print-modal")!;
+		const printModal     = document.getElementById("print-modal")!;
 		const invoiceContent = document.getElementById("invoice-content")!;
+		let   currentHtml    = "";
+
+		/** Buka window baru khusus cetak invoice A5 */
+		function openPrintWindow(html: string) {
+			const win = window.open("", "_blank", "width=640,height=900");
+			if (!win) { alert("Aktifkan popup browser untuk mencetak."); return; }
+			win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Invoice - Areta School</title>
+<script src="https://cdn.tailwindcss.com"><\/script>
+<style>
+  @page { size: A5 portrait; margin: 10mm; }
+  body  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+</style>
+</head>
+<body class="bg-white text-slate-800 font-sans text-sm p-0 m-0">
+<div class="p-2">${html}<\/div>
+<script>window.addEventListener("load", () => setTimeout(() => window.print(), 400));<\/script>
+</body>
+</html>`);
+			win.document.close();
+		}
 
 		function openModal(html: string) {
+			currentHtml = html;
 			invoiceContent.innerHTML = html;
 			printModal.classList.remove("hidden");
 			document.body.style.overflow = "hidden";
 		}
+
+		document.getElementById("modal-print-btn")!.addEventListener("click", () => {
+			openPrintWindow(currentHtml);
+		});
 		document.getElementById("modal-close")!.addEventListener("click", () => {
 			printModal.classList.add("hidden");
 			document.body.style.overflow = "";
@@ -767,15 +796,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 	<style>
 		@media print {
-			/* Saat modal terbuka: cetak hanya konten modal */
-			body:has(#print-modal:not(.hidden)) > * { display: none !important; }
-			body:has(#print-modal:not(.hidden)) #print-modal { display: block !important; position: static !important; }
-			#print-modal .print\:hidden { display: none !important; }
-
-			/* Fallback: cetak laporan biasa */
 			.print\:hidden { display: none !important; }
 			body { background: white; }
 			table { font-size: 11px; }
 		}
+
+		/* Preview: proporsional dengan tinggi A5 */
+		#invoice-content { min-height: 297px; }
 	</style>
 </AppLayout>
