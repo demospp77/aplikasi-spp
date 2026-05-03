@@ -23,11 +23,15 @@ import AppLayout from "../layouts/AppLayout.astro";
 		</article>
 		<article class="rounded-xl border border-slate-200 p-4">
 			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Tagihan</p>
-			<p id="stat-total" class="mt-2 text-3xl font-black">-</p>
+			<div id="stat-total" class="mt-2">
+				<p class="text-2xl font-black leading-tight">-</p>
+			</div>
 		</article>
 		<article class="rounded-xl border border-slate-200 p-4">
 			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Outstanding</p>
-			<p id="stat-outstanding" class="mt-2 text-3xl font-black">-</p>
+			<div id="stat-outstanding" class="mt-2">
+				<p class="text-2xl font-black leading-tight text-red-600">-</p>
+			</div>
 		</article>
 	</section>
 
@@ -68,6 +72,37 @@ import AppLayout from "../layouts/AppLayout.astro";
 		const supabase = createClient(url, key);
 		const idr = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
 
+		function formatCompact(amount) {
+			if (amount >= 1_000_000_000) {
+				const val = (amount / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+				return `Rp ${val} M`;
+			} else if (amount >= 1_000_000) {
+				const val = (amount / 1_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 });
+				return `Rp ${val} Jt`;
+			} else if (amount >= 1_000) {
+				const val = (amount / 1_000).toLocaleString("id-ID", { maximumFractionDigits: 1 });
+				return `Rp ${val} Rb`;
+			}
+			return idr.format(amount);
+		}
+
+		function setCurrencyStat(id, amount) {
+			const wrapper = document.getElementById(id);
+			if (!wrapper) return;
+			const valEl = wrapper.querySelector("p");
+			if (valEl) valEl.textContent = formatCompact(amount);
+			// Sub-label dengan nilai lengkap (hanya tampil jika >= 1000)
+			let sub = wrapper.querySelector(".stat-full");
+			if (amount >= 1_000) {
+				if (!sub) {
+					sub = document.createElement("p");
+					sub.className = "stat-full text-xs text-slate-400 mt-0.5 font-normal";
+					wrapper.appendChild(sub);
+				}
+				sub.textContent = idr.format(amount);
+			}
+		}
+
 		const STATUS_BADGE = {
 			draft: "bg-slate-100 text-slate-600",
 			posted: "bg-blue-100 text-blue-700",
@@ -98,8 +133,8 @@ import AppLayout from "../layouts/AppLayout.astro";
 
 			document.getElementById("stat-students").textContent = String(students.count ?? 0);
 			document.getElementById("stat-invoices").textContent = String(invoices.count ?? 0);
-			document.getElementById("stat-total").textContent = idr.format(agg.total);
-			document.getElementById("stat-outstanding").textContent = idr.format(agg.outstanding);
+			setCurrencyStat("stat-total", agg.total);
+			setCurrencyStat("stat-outstanding", agg.outstanding);
 		}
 
 		async function loadLatestInvoices() {
