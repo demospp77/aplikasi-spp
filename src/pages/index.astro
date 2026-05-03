@@ -6,13 +6,13 @@ import AppLayout from "../layouts/AppLayout.astro";
 	<header class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<p class="text-sm font-semibold uppercase tracking-[0.15em] text-[var(--brand)]">Dashboard</p>
-			<h2 class="text-3xl font-black">Ringkasan SPP Siswa</h2>
+			<h2 class="text-2xl font-black sm:text-3xl">Ringkasan SPP Siswa</h2>
 		</div>
 	</header>
 
 	<div id="env-error" class="hidden mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></div>
 
-	<section class="grid gap-4 md:grid-cols-4">
+	<section class="grid grid-cols-2 gap-4 md:grid-cols-4">
 		<article class="rounded-xl border border-slate-200 p-4">
 			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Total Siswa</p>
 			<p id="stat-students" class="mt-2 text-3xl font-black">-</p>

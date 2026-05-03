@@ -6,7 +6,7 @@ import "../styles/global.css";
 <html lang="id">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Login — SPP Areta</title>
@@ -90,8 +90,8 @@ import "../styles/global.css";
 			const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
 			const errorMsg = document.getElementById("error-msg") as HTMLDivElement;
 			const togglePw = document.getElementById("toggle-pw") as HTMLButtonElement;
-			const eyeOpen = document.getElementById("eye-open") as SVGElement;
-			const eyeClosed = document.getElementById("eye-closed") as SVGElement;
+			const eyeOpen = document.getElementById("eye-open") as unknown as SVGElement;
+			const eyeClosed = document.getElementById("eye-closed") as unknown as SVGElement;
 
 			togglePw.addEventListener("click", () => {
 				const isHidden = passwordEl.type === "password";
